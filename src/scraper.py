@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from request_module import fetch_webpage
 from utils import absolute_url
-from utils import extract_number, save_list_to_csv
+from utils import extract_number, save_list_to_csv_and_json
 
 
 def parse_html(html_content):
@@ -142,5 +142,5 @@ if __name__ == "__main__":
     html_content = parse_html(response)
     links = scrape_links(html_content, url)
     products = scrape_products_with_details(links)
-    save_list_to_csv('product_books.csv', products)
+    save_list_to_csv_and_json('product_books', products)
     
