@@ -9,7 +9,6 @@ This Python project scrapes product data from [books.toscrape.com](https://books
 - Scrapes book details from the homepage and linked product pages.
 - Parses product title, price, description, UPC, stock availability, and review count.
 - Saves the data in both `.csv` and `.json` files inside a `data/` directory.
-- Well-structured modular code using `BeautifulSoup`.
 
 ---
 ## ⚙️ Installation
