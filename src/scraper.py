@@ -1,10 +1,7 @@
-from datetime import datetime
-import logging
-import os
-from typing import Dict, List
 from bs4 import BeautifulSoup
 from request_module import fetch_webpage
 from utils import absolute_url
+from utils import extract_number, save_list_to_csv
 
 
 def parse_html(html_content):
@@ -59,35 +56,50 @@ def scrape_products(soup):
         if not soup:
             raise ValueError("Invalid BeautifulSoup object. Cannot scrape products.")
 
-        product_items = soup.find_all('li', class_=['col-xs-6', 'col-sm-4', 'col-md-3', 'col-lg-3'])
-        if not product_items:
+        product_item = soup.find('div', class_='product_main')
+        if not product_item:
             raise ValueError("No product items found with the specified classes.")
 
-        products = []
+       
+        title_tag = product_item.find('h1')
+        if not title_tag:
+            title_tag = product_item.find('p', class_='star-rating')
+            if title_tag:
+                title_tag = title_tag.find_next('h1') or title_tag.find_next('a')
+        title = title_tag.text.strip() if title_tag else "Title not found"
 
-        for item in product_items:
-            try:
-                title_tag = item.find('h3')  
-                if not title_tag:
-                    title_tag = item.find('p', class_='star-rating')
-                    if title_tag:
-                        title_tag = title_tag.find_next('h3') or title_tag.find_next('a')
+    
+        price_tag = product_item.find('p', class_='price_color')
+        price = price_tag.text.strip() if price_tag else "Price not found"
 
-                title = title_tag.text.strip() if title_tag else "Title not found"
+      
+        description_tag = soup.find('div', class_='sub-header').find_next('p') 
+        description = description_tag.text.strip() if description_tag else "Description not found"
 
-                
-                price_tag = item.find('p', class_='price_color')
-                price = price_tag.text.strip() if price_tag else "Price not found"
+        tables = soup.find('table', class_='table table-striped')
+        
+        tr_elements = tables.find_all('tr')
+        
+        upc_code = tr_elements[0].text.strip() if tr_elements[0] else 'upc code not found'
+        
+        product_type = tr_elements[1].text.strip() if tr_elements[1] else 'product type not found'
+        
+        in_stock = tr_elements[5].text.strip() if tr_elements[5] else 'product stock not found'
+        
+        reviews = tr_elements[6].text.strip() if tr_elements[6] else 'product reviews not found'
+        
+        index = reviews.find("reviews")
+        reviews = reviews[index + 8:]
 
-             
-                products.append({
-                    'title': title,
-                    'price': price
-                })
-
-            except Exception as e:
-                print(f"Error scraping product item: {str(e)}. Skipping this item.")
-                continue
+        products = [{
+            'title': title,
+            'price': float(price[1:]),
+            'description': description,
+            'upc_code':upc_code,
+            'type':product_type,
+            'in_stock':extract_number(in_stock),
+            'reviews': int(reviews)
+        }]
 
         return products
 
@@ -98,8 +110,29 @@ def scrape_products(soup):
         print(f"Failed to scrape products: {str(e)}")
         return []
 
-
-
+def scrape_products_with_details(links):
+    try:
+        if not links:
+            raise ValueError("Invalid BeautifulSoup object. Cannot scrape products.")
+        
+        products = []
+        for link in links:
+            try:
+               response = fetch_webpage(link)
+               html_content = parse_html(response)
+               product = scrape_products(html_content)
+               products.append(product) 
+               
+            except Exception as e:
+                print(f"Error scraping product item: {str(e)}. Skipping this item.")
+                continue 
+        return products
+    except ValueError as ve:
+        print(f"Error: {ve}")
+        return []
+    except Exception as e:
+        print(f"Failed to scrape products: {str(e)}")
+        return []
 
 
 
@@ -108,5 +141,6 @@ if __name__ == "__main__":
     response = fetch_webpage(url)
     html_content = parse_html(response)
     links = scrape_links(html_content, url)
-    
+    products = scrape_products_with_details(links)
+    save_list_to_csv('product_books.csv', products)
     
