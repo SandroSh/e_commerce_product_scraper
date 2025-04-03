@@ -1,1 +1,1 @@
-from fetch_webpage import fetch_webpage
+from .fetch_webpage import fetch_webpage

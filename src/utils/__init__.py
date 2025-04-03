@@ -1,0 +1,1 @@
+from .utils import absolute_url
